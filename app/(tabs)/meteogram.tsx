@@ -153,10 +153,11 @@ export default () => {
   })
 
 
-  const times = weatherData?.Air_temperature_at_2m?.data.map(d=>d[0]) ?? []
-  const temps = weatherData?.Air_temperature_at_2m?.data.map(d=>d[3]) ?? []
+  const temps = weatherData?.Air_temperature_at_2m?.data??[]
+  const rain  = weatherData?.Total_precipitation?.data??[]
+  const cloud = weatherData?.Total_cloud_cover?.data??[]
 
-  console.log('weatherData', times, temps)
+  console.log('weatherData',  data)
 
 
   return (
@@ -166,9 +167,7 @@ export default () => {
       </Text>
       <Text>{closestLocation?.station_name}</Text>
       <Text>Distance: {closestLocation?.distance.toFixed(2)} km</Text>
-      <Text>{descriptorsData?.data?.map((d) => d.type)}</Text>
-      <Text></Text>
-      <MyChart times={times} temps={temps}/>
+      <MyChart  temps={temps} rain={rain} cloud={cloud}/>
     </View>
   )
 }
