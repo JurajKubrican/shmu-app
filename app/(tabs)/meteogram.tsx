@@ -3,6 +3,8 @@ import { View, StyleSheet, Button, Text } from 'react-native'
 import * as Location from 'expo-location'
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { WeatherData } from '@/components/types'
+import { MyChart } from '@/components/chart'
 
 const getDistance = (
   lat1: number,
@@ -24,10 +26,54 @@ type ShmuLocation = {
 }
 type ShmuLocationWithDistance = ShmuLocation & { distance: number }
 
+export type Station = {
+  station_id: number
+  station_name: string
+  lat: string
+  lon: string
+  district_code: number
+}
+
+export type ModelResultDescriptor = {
+  type: string
+  dt_runtime: string
+  runtime: number
+  file_link: string
+}
+
+type GetModelResultDescriptorsForStation = {
+  station: Station
+  data: ModelResultDescriptor[]
+}
+
 const getLocations = async () => {
   const response = await fetch(
     'https://www.shmu.sk/api/v1/nwp/getjsonaladinstations',
   )
+  return response.json()
+}
+
+const getModelResultDescriptorsForStation = async (stationId: string) => {
+  const response = await fetch(
+    'https://www.shmu.sk/api/v1/nwp/getstationproducts?station=' + stationId,
+  )
+  if (!response.ok) {
+    throw new Error('Network response was not ok')
+  }
+  console.log(
+    response,
+    'https://www.shmu.sk/api/v1/nwp/getstationproducts?station=' + stationId,
+  )
+  return response.json()
+}
+
+const getWeatherData = async (fileLink: string) => {
+  const response = await fetch(
+    'https://www.shmu.sk/data/datanwp/json/'+fileLink,
+  )
+  if (!response.ok) {
+    throw new Error('Network response was not ok')
+  }
   return response.json()
 }
 
@@ -40,21 +86,46 @@ export default () => {
     queryFn: getLocations,
   })
 
-  const closestLocation = data?.reduce<ShmuLocationWithDistance>((closest, current) => {
-    if (!location) return closest
+  // console.log('data', data)
 
-    const currentDistance = getDistance(
-      parseFloat(current.lat),
-      parseFloat(current.lon),
-      location.coords.latitude,
-      location.coords.longitude,
-    )
-    if (currentDistance < closest.distance) {
-      return {...current, distance: currentDistance }
-    }
-    return closest
-    
-  }, {...data[0], distance: Infinity}) || null
+  const closestLocation =
+    data?.reduce<ShmuLocationWithDistance>(
+      (closest, current) => {
+        if (!location) return closest
+
+        const currentDistance = getDistance(
+          parseFloat(current.lat),
+          parseFloat(current.lon),
+          location.coords.latitude,
+          location.coords.longitude,
+        )
+        if (currentDistance < closest.distance) {
+          return { ...current, distance: currentDistance }
+        }
+        return closest
+      },
+      { ...data[0], distance: Infinity },
+    ) || null
+
+  // console.log(
+  //   'closestLocation',
+  //   closestLocation?.station_id,
+  //   !!closestLocation?.station_id,
+  // )
+
+  const { data: descriptorsData, error } =
+    useQuery<GetModelResultDescriptorsForStation>({
+      queryKey: ['location-descriptors', closestLocation?.station_id],
+      enabled: !!closestLocation?.station_id,
+      queryFn: () =>
+        getModelResultDescriptorsForStation(closestLocation?.station_id + ''),
+    })
+
+  // console.log(
+  //   error,
+  //   descriptorsData?.data,
+  //   descriptorsData?.data?.map((d) => d.type),
+  // )
 
   useEffect(() => {
     async function getCurrentLocation() {
@@ -71,12 +142,33 @@ export default () => {
     getCurrentLocation()
   }, [])
 
+  const firstDataset = descriptorsData?.data?.find(
+    (d) => d.type === 'alaef',
+  )
+
+  const {data: weatherData, isLoading} = useQuery<WeatherData>({
+    queryKey: ['weather-data', closestLocation?.station_id, firstDataset?.dt_runtime],
+    enabled: !!firstDataset?.file_link,
+    queryFn: () => getWeatherData(firstDataset?.file_link??''),
+  })
+
+
+  const times = weatherData?.Air_temperature_at_2m?.data.map(d=>d[0]) ?? []
+  const temps = weatherData?.Air_temperature_at_2m?.data.map(d=>d[3]) ?? []
+
+  console.log('weatherData', times, temps)
+
+
   return (
     <View style={styles.container}>
-      <Text>{location?.coords.latitude} - {location?.coords.longitude}</Text>
+      <Text>
+        {location?.coords.latitude} - {location?.coords.longitude}
+      </Text>
       <Text>{closestLocation?.station_name}</Text>
       <Text>Distance: {closestLocation?.distance.toFixed(2)} km</Text>
-
+      <Text>{descriptorsData?.data?.map((d) => d.type)}</Text>
+      <Text></Text>
+      <MyChart times={times} temps={temps}/>
     </View>
   )
 }
