@@ -86,7 +86,6 @@ export default () => {
     queryFn: getLocations,
   })
 
-  // console.log('data', data)
 
   const closestLocation =
     data?.reduce<ShmuLocationWithDistance>(
@@ -107,12 +106,6 @@ export default () => {
       { ...data[0], distance: Infinity },
     ) || null
 
-  // console.log(
-  //   'closestLocation',
-  //   closestLocation?.station_id,
-  //   !!closestLocation?.station_id,
-  // )
-
   const { data: descriptorsData, error } =
     useQuery<GetModelResultDescriptorsForStation>({
       queryKey: ['location-descriptors', closestLocation?.station_id],
@@ -121,11 +114,6 @@ export default () => {
         getModelResultDescriptorsForStation(closestLocation?.station_id + ''),
     })
 
-  // console.log(
-  //   error,
-  //   descriptorsData?.data,
-  //   descriptorsData?.data?.map((d) => d.type),
-  // )
 
   useEffect(() => {
     async function getCurrentLocation() {

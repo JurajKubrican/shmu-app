@@ -9,7 +9,6 @@ type Props = {
 }
 
 export const MyChart: FC<Props> = ({ temps = [], rain = [], cloud = [] }) => {
-  console.log('temps', temps.length, 'rain', rain.length)
   const data = temps.map((t, i) => {
     console.log(cloud[i])
     return {
@@ -17,14 +16,11 @@ export const MyChart: FC<Props> = ({ temps = [], rain = [], cloud = [] }) => {
       minT: t[1],
       medianT: t[3],
       maxT: t[5],
-      // todo last rain is not available????
       minR: rain[i]?.[1] ?? 0,
       medianR: rain[i]?.[3] ?? 0,
       maxR: rain[i]?.[5] ?? 0,
 
-      // maxC: 100 - (cloud[i]?.[1] ?? 0),
-      medianC: 100 - (cloud[i]?.[3] ?? 0),
-      // minC: 100- (cloud[i]?.[5] ?? 0),
+      medianC: 100 - (cloud[i]?.[3] ?? 100),
     }
   })
 
@@ -47,10 +43,8 @@ export const MyChart: FC<Props> = ({ temps = [], rain = [], cloud = [] }) => {
           'minR',
           'medianR',
           'maxR',
-          // 'minC',
           'medianC',
-          // 'maxC',
-        ]} // 👈 specify data keys used for y-axis
+        ]} 
       >
         {({ points }) => (
           <>
@@ -88,9 +82,3 @@ export const MyChart: FC<Props> = ({ temps = [], rain = [], cloud = [] }) => {
     </View>
   )
 }
-
-const DATA = Array.from({ length: 31 }, (_, i) => ({
-  day: i,
-  lowTmp: 20 + 10 * Math.random(),
-  highTmp: 40 + 30 * Math.random(),
-}))
